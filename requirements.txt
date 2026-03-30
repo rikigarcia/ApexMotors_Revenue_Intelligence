@@ -1,0 +1,14 @@
+# ApexMotors Revenue Intelligence - Dependency List
+
+setuptools
+wheel
+numpy
+pandas
+scikit-learn
+xgboost
+shap
+matplotlib
+seaborn
+joblib
+streamlit
+fpdf
