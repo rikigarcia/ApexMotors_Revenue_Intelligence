@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import suppress
+
 import streamlit as st
 
 
@@ -12,10 +14,8 @@ st.info(
     icon="ℹ️",
 )
 
-try:
+with suppress(Exception):
     st.switch_page("app.py")
-except Exception:
-    pass
 
 # --- PATH INITIALIZATION ---
 BASE_DIR = Path(__file__).resolve().parent.parent

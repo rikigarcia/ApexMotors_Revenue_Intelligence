@@ -98,14 +98,6 @@ def build_executive_snapshot_pdf(snapshot: ExecutiveSnapshot) -> bytes:
         ),
     )
 
-    # Absolute safety: sanitize any residual unicode in page buffers.
-    # This protects against any strings introduced indirectly by FPDF.
-    try:
-        for i in range(1, len(pdf.pages) + 1):
-            pdf.pages[i] = _pdf_safe(pdf.pages[i])
-    except Exception:
-        pass
-
     # Output (FPDF returns a latin-1 string)
     return pdf.output(dest="S").encode("latin-1", errors="ignore")
 

@@ -29,13 +29,10 @@ def apply_exec_dark_style(ax: Axes) -> None:
     ax.title.set_size(16)
 
     # Scientific notation / offset text (e.g., "1e6") can be hard to read on dark bg
-    try:
-        ax.xaxis.get_offset_text().set_color(tick_color)
-        ax.yaxis.get_offset_text().set_color(tick_color)
-        ax.xaxis.get_offset_text().set_size(12)
-        ax.yaxis.get_offset_text().set_size(12)
-    except Exception:
-        pass
+    ax.xaxis.get_offset_text().set_color(tick_color)
+    ax.yaxis.get_offset_text().set_color(tick_color)
+    ax.xaxis.get_offset_text().set_size(12)
+    ax.yaxis.get_offset_text().set_size(12)
 
     # Gridlines
     ax.grid(axis="y", linestyle="--", alpha=0.22, color="#94a3b8")
