@@ -1,14 +1,18 @@
 # ApexMotors Revenue Intelligence - Dependency List
+#
+# Note: pinned versions improve reproducibility for evaluators.
 
-setuptools
-wheel
-numpy
-pandas
-scikit-learn
-xgboost
-shap
-matplotlib
-seaborn
-joblib
-streamlit
-fpdf
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0
+imbalanced-learn==0.14.0
+
+xgboost==3.2.0
+shap==0.51.0
+joblib==1.5.3
+
+matplotlib==3.10.8
+seaborn==0.13.2
+
+streamlit==1.56.0
+fpdf==1.7.2

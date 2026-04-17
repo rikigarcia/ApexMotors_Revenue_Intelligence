@@ -1,0 +1,46 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Data / artifacts (never commit real CRM exports)
+data/raw/
+data/processed/
+*.csv
+*.parquet
+*.feather
+*.xlsx
+*.jsonl
+
+# Models / binaries
+models/
+*.joblib
+*.pkl
+*.bin
+
+# Reports / exports
+*.pdf
+
+# OS / tooling
+.python-version
+
