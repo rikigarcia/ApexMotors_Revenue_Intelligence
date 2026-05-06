@@ -60,18 +60,124 @@ def validate_dataset(df: pd.DataFrame) -> list[str]:
     return issues
 
 
-def score_leads(df: pd.DataFrame, model_path: Path) -> tuple[pd.DataFrame, str]:
+def rules_based_probability(df: pd.DataFrame) -> pd.Series:
+    """
+    Transparent fallback score in [0, 1].
+
+    Weighted blend of normalized engagement minutes, web-configurator and test-drive
+    signals, and engagement density. Used when the trained model artifact is
+    unavailable and exposed as a public function so callers (and tests) can
+    reproduce the fallback path deterministically.
+    """
+
+    def _safe_col(name: str, default: float = 0.0) -> pd.Series:
+        if name in df.columns:
+            return pd.to_numeric(df[name], errors="coerce").fillna(default)
+        return pd.Series([default] * len(df), index=df.index)
+
+    app_mins = _safe_col("App_Engagement_Mins")
+    web_cfg = _safe_col("Web_Configurator_Status")
+    test_drive = _safe_col("Test_Drive_Completed")
+    engagement_density = _safe_col("Engagement_Density")
+
+    raw_score = (
+        0.50 * (app_mins / max(app_mins.max(), 1.0))
+        + 0.25 * web_cfg.clip(0, 1)
+        + 0.20 * test_drive.clip(0, 1)
+        + 0.05 * (engagement_density / max(engagement_density.max(), 1.0))
+    ).clip(0, 1)
+
+    return raw_score.astype(float)
+
+
+def synthetic_demo_portfolio(n: int, seed: int = 0) -> pd.DataFrame:
+    """
+    Build a deterministic synthetic lead portfolio that satisfies validate_dataset
+    and produces a realistic spread across all four strategy tiers when scored
+    via rules_based_probability + DEFAULT_THRESHOLDS.
+    """
+    rng = np.random.default_rng(seed)
+
+    # Three behavioural cohorts: high-intent, mid-funnel, and dormant.
+    categories = rng.choice(
+        ["high", "mid", "low"],
+        size=n,
+        p=[0.15, 0.30, 0.55],
+    )
+
+    app_mins = np.where(
+        categories == "high",
+        rng.uniform(80.0, 120.0, n),
+        np.where(
+            categories == "mid",
+            rng.uniform(30.0, 80.0, n),
+            rng.uniform(1.0, 30.0, n),
+        ),
+    )
+
+    web_cfg = np.where(
+        categories == "high",
+        1,
+        np.where(categories == "mid", rng.binomial(1, 0.5, n), 0),
+    )
+
+    test_drive = np.where(
+        categories == "high",
+        1,
+        np.where(categories == "mid", rng.binomial(1, 0.3, n), 0),
+    )
+
+    last_contact = np.where(
+        categories == "high",
+        rng.integers(0, 10, n),
+        np.where(
+            categories == "mid",
+            rng.integers(5, 30, n),
+            rng.integers(20, 90, n),
+        ),
+    )
+
+    engagement_density = app_mins / (last_contact + 1.0)
+
+    purchase_p = np.where(
+        categories == "high",
+        0.7,
+        np.where(categories == "mid", 0.3, 0.05),
+    )
+    purchase = rng.binomial(1, purchase_p, n).astype(int)
+
+    lead_ids = [f"DEMO_{i:06d}" for i in range(n)]
+
+    return pd.DataFrame(
+        {
+            "Lead_ID": lead_ids,
+            "Purchase": purchase,
+            "App_Engagement_Mins": app_mins.astype(float),
+            "Web_Configurator_Status": web_cfg.astype(int),
+            "Test_Drive_Completed": test_drive.astype(int),
+            "Last_Contact_Days": last_contact.astype(int),
+            "Engagement_Density": engagement_density.astype(float),
+        }
+    )
+
+
+def score_leads(
+    df: pd.DataFrame, model_path: Path
+) -> tuple[pd.DataFrame, str, str | None]:
     """
     Attach a Probability column to df.
 
     - Prefers the saved model artifact when available.
     - Falls back to a transparent rules-based score if model loading/prediction fails.
+
+    Returns ``(df_with_probability, status, reason)`` where ``status`` is either
+    ``"model"`` or ``"rules_fallback"`` and ``reason`` is ``None`` on the model
+    path or a ``"<ExceptionType>: <message>"`` string when the fallback fires.
     """
     if "Probability" in df.columns and {"Purchase", "Lead_ID"}.issubset(df.columns):
         df = df.copy()
         df = df.drop(columns=["Probability"])
 
-    model_status = "rules_fallback"
     try:
         if not model_path.exists():
             raise FileNotFoundError(f"Model artifact not found at {model_path}")
@@ -81,30 +187,12 @@ def score_leads(df: pd.DataFrame, model_path: Path) -> tuple[pd.DataFrame, str]:
         X = df[feature_cols]
         df = df.copy()
         df["Probability"] = model.predict_proba(X)[:, 1]
-        model_status = "model"
-        return df, model_status
-    except Exception:
+        return df, "model", None
+    except Exception as exc:
         df = df.copy()
-
-        def _safe_col(name: str, default: float = 0.0) -> pd.Series:
-            if name in df.columns:
-                return pd.to_numeric(df[name], errors="coerce").fillna(default)
-            return pd.Series([default] * len(df), index=df.index)
-
-        app_mins = _safe_col("App_Engagement_Mins")
-        web_cfg = _safe_col("Web_Configurator_Status")
-        test_drive = _safe_col("Test_Drive_Completed")
-        engagement_density = _safe_col("Engagement_Density")
-
-        raw_score = (
-            0.50 * (app_mins / max(app_mins.max(), 1.0))
-            + 0.25 * web_cfg.clip(0, 1)
-            + 0.20 * test_drive.clip(0, 1)
-            + 0.05 * (engagement_density / max(engagement_density.max(), 1.0))
-        ).clip(0, 1)
-
-        df["Probability"] = raw_score.astype(float)
-        return df, model_status
+        df["Probability"] = rules_based_probability(df)
+        reason = f"{type(exc).__name__}: {exc}"
+        return df, "rules_fallback", reason
 
 
 def get_strategy(prob: float, thresholds: dict[str, float]) -> str:
