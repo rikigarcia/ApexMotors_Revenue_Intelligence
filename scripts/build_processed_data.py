@@ -7,6 +7,26 @@ from pathlib import Path
 import pandas as pd
 
 
+RAW_REQUIRED_COLUMNS = {
+    "Lead_ID",
+    "Purchase",
+    "App_Engagement_Mins",
+    "Web_Configurator_Status",
+    "Test_Drive_Completed",
+    "Last_Contact_Days",
+    "Lead_Source",
+}
+
+
+def validate_raw_columns(df: pd.DataFrame) -> list[str]:
+    """Return human-readable issues for a raw extract before feature engineering."""
+    issues: list[str] = []
+    missing = sorted(RAW_REQUIRED_COLUMNS - set(df.columns))
+    if missing:
+        issues.append(f"Missing required raw columns: {', '.join(missing)}")
+    return issues
+
+
 def assign_temp(days: float) -> str:
     if days <= 7:
         return "Hot"

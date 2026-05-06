@@ -146,7 +146,7 @@ def main() -> None:
             st.write(f"- {msg}")
         st.stop()
 
-    df_scored, model_status = score_leads(df, MODEL_PATH)
+    df_scored, model_status, _ = score_leads(df, MODEL_PATH)
     ctx = render_sidebar(model_status)
 
     thresholds = ctx["thresholds"]
