@@ -1,0 +1,26 @@
+---
+description: Strip auto-appended "Made with Cursor" footer from PRs in this repo
+alwaysApply: true
+---
+
+# No PR attribution footer
+
+When opening or editing a pull request in this repository, do not include a
+"Made with [Cursor](https://cursor.com)" footer (or any equivalent attribution
+line) in the PR body. The Cursor IDE agent appends this footer automatically;
+strip it before finalizing.
+
+## How to comply
+
+- After running `gh pr create`, fetch the body with `gh pr view <n> --json body -q .body`,
+  remove any trailing "Made with [Cursor](...)" line (and the blank line above
+  it), and write the cleaned body back with `gh pr edit <n> --body "$(cat <<'EOF' ... EOF)"`.
+- Do the same after `gh pr edit` if the footer reappears.
+- Do not add the footer manually in commit messages either.
+
+## Scope
+
+- Applies to all PRs opened from this workspace, including follow-ups,
+  dependabot bumps, and CI fixes.
+- Does not change global Cursor attribution behaviour; users who want this
+  off everywhere can flip Cursor Settings > Agent > Attribution.
