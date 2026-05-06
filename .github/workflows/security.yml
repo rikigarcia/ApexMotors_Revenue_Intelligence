@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main, master]
+  # Manual trigger so the security scan can be re-run on demand from the Actions tab.
+  workflow_dispatch:
   schedule:
     - cron: "0 7 * * 1" # weekly
 
@@ -14,22 +16,27 @@ jobs:
   secret-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # actions/checkout pinned to v6 (Node 24) to clear Node 20 deprecation warnings.
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      # Do not pass base/head here: overrides force a diff scan and fail on schedule
+      # when HEAD equals the default branch tip (same commit). Omitting inputs uses
+      # the action's event logic: push/compare uses event SHAs; schedule scans the repo.
+      # Pinned to v3.95.2 (current latest) for upstream fixes.
       - name: TruffleHog secret scan
-        uses: trufflesecurity/trufflehog@v3.90.5
+        uses: trufflesecurity/trufflehog@v3.95.2
         with:
           path: .
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
           extra_args: --only-verified
 
   python-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # actions/checkout and actions/setup-python pinned to v6 to clear Node 20
+      # deprecation warnings and run on the current supported runner stack.
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install audit tools
