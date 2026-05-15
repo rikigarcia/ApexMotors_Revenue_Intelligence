@@ -3,7 +3,7 @@
 # Note: pinned versions improve reproducibility for evaluators.
 
 numpy==2.4.4
-pandas==3.0.2
+pandas==3.0.3
 scikit-learn==1.8.0
 imbalanced-learn==0.14.0
 
